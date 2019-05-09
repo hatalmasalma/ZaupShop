@@ -93,6 +93,9 @@
     <Compile Include="ZaupShopConfiguration.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Libraries\I18N.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Libraries\I18N.West.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
