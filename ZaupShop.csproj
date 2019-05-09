@@ -41,11 +41,6 @@
       <HintPath>lib\Assembly-CSharp-firstpass.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="I18N, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>Libraries\I18N.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="I18N.West, Version=2.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Libraries\I18N.West.dll</HintPath>
@@ -99,9 +94,6 @@
     <Compile Include="ZaupShopConfiguration.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Libraries\I18N.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Libraries\I18N.West.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
