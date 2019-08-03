@@ -468,7 +468,6 @@ namespace ZaupShop
             }
 
             string name = null;
-            ItemAsset vAsset = null;
             if (!ushort.TryParse(components[0], out var id))
             {
                 var array = Assets.find(EAssetType.ITEM);
@@ -479,18 +478,23 @@ namespace ZaupShop
                 name = iAsset.itemName;
             }
 
-            if (Assets.find(EAssetType.ITEM, id) == null)
+            if (id == 0)
             {
                 message = Instance.Translate("could_not_find", components[0]);
                 UnturnedChat.Say(playerid, message);
                 return false;
             }
 
-            if (name == null && id != 0)
+            var vAsset = (ItemAsset) Assets.find(EAssetType.ITEM, id);
+
+            if (vAsset == null)
             {
-                vAsset = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-                name = vAsset.itemName;
+                message = Instance.Translate("could_not_find", components[0]);
+                UnturnedChat.Say(playerid, message);
+                return false;
             }
+
+            if (name == null) name = vAsset.itemName;
 
             // Get how many they have
             if (playerid.Inventory.has(id) == null)
@@ -595,6 +599,7 @@ namespace ZaupShop
             playerid.Player.gameObject.SendMessage("ZaupShopOnSell", new object[] {playerid, addmoney, amt, id},
                 SendMessageOptions.DontRequireReceiver);
             UnturnedChat.Say(playerid, message);
+
             return true;
         }
     }
