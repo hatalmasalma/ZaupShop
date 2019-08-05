@@ -242,7 +242,14 @@ namespace ZaupShop
                         var array = Assets.find(EAssetType.VEHICLE);
 
                         var vAsset = array.Cast<VehicleAsset>()
-                            .First(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
+                            .FirstOrDefault(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
+
+                        if (vAsset == null)
+                        {
+                            message = Instance.Translate("could_not_find", components[1]);
+                            UnturnedChat.Say(playerid, message);
+                            return false;
+                        }
 
                         id = vAsset.id;
                         name = vAsset.vehicleName;
@@ -304,8 +311,15 @@ namespace ZaupShop
                     if (!ushort.TryParse(components[0], out id))
                     {
                         var array = Assets.find(EAssetType.ITEM);
-                        var iAsset = array.Cast<ItemAsset>().First(k =>
+                        var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
                             k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
+
+                        if (iAsset == null)
+                        {
+                            message = Instance.Translate("could_not_find", components[1]);
+                            UnturnedChat.Say(playerid, message);
+                            return false;
+                        }
 
                         id = iAsset.id;
                         name = iAsset.itemName;
@@ -382,7 +396,14 @@ namespace ZaupShop
                         var array = Assets.find(EAssetType.VEHICLE);
 
                         var vAsset = array.Cast<VehicleAsset>()
-                            .First(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
+                            .FirstOrDefault(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
+
+                        if (vAsset == null)
+                        {
+                            message = Instance.Translate("could_not_find", components[1]);
+                            UnturnedChat.Say(playerid, message);
+                            return;
+                        }
 
                         id = vAsset.id;
                         name = vAsset.vehicleName;
@@ -410,8 +431,15 @@ namespace ZaupShop
                     if (!ushort.TryParse(components[0], out id))
                     {
                         var array = Assets.find(EAssetType.ITEM);
-                        var iAsset = array.Cast<ItemAsset>().First(k =>
+                        var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
                             k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
+
+                        if (iAsset == null)
+                        {
+                            message = Instance.Translate("could_not_find", components[1]);
+                            UnturnedChat.Say(playerid, message);
+                            return;
+                        }
 
                         id = iAsset.id;
                         name = iAsset.itemName;
@@ -471,8 +499,15 @@ namespace ZaupShop
             if (!ushort.TryParse(components[0], out var id))
             {
                 var array = Assets.find(EAssetType.ITEM);
-                var iAsset = array.Cast<ItemAsset>().First(k =>
+                var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
                     k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
+
+                if (iAsset == null)
+                {
+                    message = Instance.Translate("could_not_find", components[1]);
+                    UnturnedChat.Say(playerid, message);
+                    return false;
+                }
 
                 id = iAsset.id;
                 name = iAsset.itemName;
