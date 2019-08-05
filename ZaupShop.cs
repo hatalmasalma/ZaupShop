@@ -14,6 +14,15 @@ namespace ZaupShop
         public DatabaseMgr ShopDB;
         public static ZaupShop Instance;
 
+        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal amt, byte items, ushort item,
+            string type = "item");
+
+        public event PlayerShopBuy OnShopBuy;
+
+        public delegate void PlayerShopSell(UnturnedPlayer player, decimal amt, byte items, ushort item);
+
+        public event PlayerShopSell OnShopSell;
+
         public override TranslationList DefaultTranslations =>
             new TranslationList
             {
@@ -185,14 +194,11 @@ namespace ZaupShop
             ShopDB = new DatabaseMgr();
         }
 
-        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal amt, byte items, ushort item,
-            string type = "item");
-
-        public event PlayerShopBuy OnShopBuy;
-
-        public delegate void PlayerShopSell(UnturnedPlayer player, decimal amt, byte items, ushort item);
-
-        public event PlayerShopSell OnShopSell;
+        protected override void Unload()
+        {
+            ShopDB = null;
+            Instance = null;
+        }
 
         public bool Buy(UnturnedPlayer playerid, string[] components0)
         {
@@ -316,7 +322,7 @@ namespace ZaupShop
 
                         if (iAsset == null)
                         {
-                            message = Instance.Translate("could_not_find", components[1]);
+                            message = Instance.Translate("could_not_find", components[0]);
                             UnturnedChat.Say(playerid, message);
                             return false;
                         }
@@ -436,7 +442,7 @@ namespace ZaupShop
 
                         if (iAsset == null)
                         {
-                            message = Instance.Translate("could_not_find", components[1]);
+                            message = Instance.Translate("could_not_find", components[0]);
                             UnturnedChat.Say(playerid, message);
                             return;
                         }
@@ -504,7 +510,7 @@ namespace ZaupShop
 
                 if (iAsset == null)
                 {
-                    message = Instance.Translate("could_not_find", components[1]);
+                    message = Instance.Translate("could_not_find", components[0]);
                     UnturnedChat.Say(playerid, message);
                     return false;
                 }
