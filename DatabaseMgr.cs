@@ -60,7 +60,7 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set itemname='{name}', cost='{cost}' where id='{id}';"
+                    ? $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set itemname=@name, cost='{cost}' where id='{id}';"
                     : $"Insert into `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
@@ -75,7 +75,7 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` set vehiclename='{name}', cost='{cost}' where id='{id}';"
+                    ? $"update `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` set vehiclename=@name, cost='{cost}' where id='{id}';"
                     : $"Insert into `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
