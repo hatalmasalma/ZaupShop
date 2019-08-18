@@ -61,7 +61,8 @@ namespace ZaupShop
             var affected = ExecuteQuery(false,
                 change
                     ? $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set itemname='{name}', cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', '{name}', '{cost}');");
+                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                new MySqlParameter("@name", name));
 
             if (affected == null) return false;
 
@@ -75,7 +76,8 @@ namespace ZaupShop
             var affected = ExecuteQuery(false,
                 change
                     ? $"update `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` set vehiclename='{name}', cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', '{name}', '{cost}');");
+                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                new MySqlParameter("@name", name));
 
             if (affected == null) return false;
 
@@ -158,32 +160,33 @@ namespace ZaupShop
         /// </summary>
         /// <param name="isScalar">If the query is expected to return a value.</param>
         /// <param name="query">The query to execute.</param>
+        /// <param name="parameters">The MySqlParameters to be added to the command.</param>
         /// <returns>The value if isScalar is true, null otherwise.</returns>
-        public object ExecuteQuery(bool isScalar, string query)
+        public object ExecuteQuery(bool isScalar, string query, params MySqlParameter[] parameters)
         {
-            // This method is to reduce the amount of copy paste that there was within this class.
-            // Initiate result and connection globally instead of within TryCatch context.
-            var connection = CreateConnection();
             object result = null;
 
-            try
+            using (var connection = CreateConnection())
             {
-                // Initialize command within try context, and execute within it as well.
-                var command = connection.CreateCommand();
-                command.CommandText = query;
+                try
+                {
+                    var command = connection.CreateCommand();
+                    command.CommandText = query;
 
-                connection.Open();
-                result = isScalar ? command.ExecuteScalar() : command.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                // Catch and log any errors during execution, like connection or similar.
-                Logger.LogException(ex);
-            }
-            finally
-            {
-                // No matter what happens, close the connection at the end of execution.
-                connection.Close();
+                    foreach (var parameter in parameters)
+                        command.Parameters.Add(parameter);
+
+                    connection.Open();
+                    result = isScalar ? command.ExecuteScalar() : command.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogException(ex);
+                }
+                finally
+                {
+                    connection.Close();
+                }
             }
 
             return result;
