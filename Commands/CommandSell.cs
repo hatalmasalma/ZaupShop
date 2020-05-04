@@ -3,10 +3,12 @@ using Rocket.API;
 using Rocket.Unturned.Player;
 using Steamworks;
 
-namespace ZaupShop
+namespace ZaupShop.Commands
 {
     public class CommandSell : IRocketCommand
     {
+        #region Boilerplate
+        
         public AllowedCaller AllowedCaller => AllowedCaller.Player;
 
         public string Name => "sell";
@@ -18,10 +20,12 @@ namespace ZaupShop
         public List<string> Aliases => new List<string>();
 
         public List<string> Permissions => new List<string>();
-
-        public void Execute(IRocketPlayer playerid, string[] msg)
+        
+        #endregion
+        
+        public void Execute(IRocketPlayer player, string[] msg)
         {
-            ZaupShop.Instance.Sell(UnturnedPlayer.FromCSteamID(new CSteamID(ulong.Parse(playerid.Id))), msg);
+            ZaupShop.Instance.Sell((UnturnedPlayer)player, msg);
         }
     }
 }

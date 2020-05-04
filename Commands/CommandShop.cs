@@ -5,22 +5,19 @@ using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 
-namespace ZaupShop
+namespace ZaupShop.Commands
 {
     public class CommandShop : IRocketCommand
     {
+        #region Boilerplate
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
-
         public string Name => "shop";
-
         public string Help => "Allows admins to change, add, or remove items/vehicles from the shop.";
-
         public string Syntax => "<add | rem | chng | buy> [v.]<itemid> <cost>";
-
         public List<string> Aliases => new List<string>();
-
         public List<string> Permissions => new List<string> {"shop.*", "shop.add", "shop.rem", "shop.chng", "shop.buy"};
-
+        #endregion
+        
         public void Execute(IRocketPlayer caller, string[] msg)
         {
             var console = caller is ConsolePlayer;
