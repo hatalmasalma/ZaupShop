@@ -21,9 +21,9 @@ namespace ZaupShop.Commands
         
         #endregion
 
-        public void Execute(IRocketPlayer playerid, string[] command)
+        public void Execute(IRocketPlayer player, string[] command)
         {
-            UnturnedPlayer uPlayer = (UnturnedPlayer) playerid;
+            UnturnedPlayer uPlayer = (UnturnedPlayer) player;
             SteamPlayer steamPlayer = PlayerTool.getSteamPlayer(uPlayer.CSteamID);
             
             // Tell the player how to use the command when misused

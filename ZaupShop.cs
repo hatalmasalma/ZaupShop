@@ -14,12 +14,12 @@ namespace ZaupShop
         public DatabaseMgr ShopDB;
         public static ZaupShop Instance;
 
-        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal amt, byte items, ushort item,
+        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal totalCost, byte itemAmount, ushort itemID,
             string type = "item");
 
         public event PlayerShopBuy OnShopBuy;
 
-        public delegate void PlayerShopSell(UnturnedPlayer player, decimal amt, byte items, ushort item);
+        public delegate void PlayerShopSell(UnturnedPlayer player, decimal totalIncome, byte itemAmount, ushort itemID);
 
         public event PlayerShopSell OnShopSell;
 
@@ -220,175 +220,10 @@ namespace ZaupShop
                 new object[] {player, price, amount, itemID, "item"}, SendMessageOptions.DontRequireReceiver);
         }
 
-        public bool Sell(UnturnedPlayer playerid, string[] components)
+        public void RaiseSellItem(UnturnedPlayer uPlayer, decimal income, byte items, ushort itemID)
         {
-            string message;
-            if (components.Length == 0 || components.Length > 0 && components[0].Trim() == string.Empty)
-            {
-                message = Instance.Translate("sell_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            byte amttosell = 1;
-            if (components.Length > 1)
-                if (!byte.TryParse(components[1], out amttosell))
-                {
-                    message = Instance.Translate("invalid_amt");
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-
-            var amt = amttosell;
-            if (!Instance.Configuration.Instance.CanSellItems)
-            {
-                message = Instance.Translate("sell_items_off");
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            string name = null;
-            if (!ushort.TryParse(components[0], out var id))
-            {
-                var array = Assets.find(EAssetType.ITEM);
-                var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
-                    k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
-
-                if (iAsset == null)
-                {
-                    message = Instance.Translate("could_not_find", components[0]);
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-
-                id = iAsset.id;
-                name = iAsset.itemName;
-            }
-
-            if (id == 0)
-            {
-                message = Instance.Translate("could_not_find", components[0]);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            var vAsset = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-
-            if (vAsset == null)
-            {
-                message = Instance.Translate("could_not_find", components[0]);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            if (name == null) name = vAsset.itemName;
-
-            // Get how many they have
-            if (playerid.Inventory.has(id) == null)
-            {
-                message = Instance.Translate("not_have_item_sell", name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            var list = playerid.Inventory.search(id, true, true);
-            if (list.Count == 0 || vAsset.amount == 1 && list.Count < amttosell)
-            {
-                message = Instance.Translate("not_enough_items_sell", amttosell.ToString(), name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            if (vAsset.amount > 1)
-            {
-                var ammomagamt = 0;
-                foreach (var ins in list) ammomagamt += ins.jar.item.amount;
-                if (ammomagamt < amttosell)
-                {
-                    message = Instance.Translate("not_enough_ammo_sell", name);
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-            }
-
-            // We got this far, so let's buy back the items and give them money.
-            // Get cost per item.  This will be whatever is set for most items, but changes for ammo and magazines.
-            var price = Instance.ShopDB.GetItemBuyPrice(id);
-            if (price <= 0.00m)
-            {
-                message = Instance.Translate("no_sell_price_set", name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            byte quality = 100;
-            decimal peritemprice = 0;
-            decimal addmoney = 0;
-            switch (vAsset.amount)
-            {
-                case 1:
-                    // These are single items, not ammo or magazines
-                    while (amttosell > 0)
-                    {
-                        if (playerid.Player.equipment.checkSelection(list[0].page, list[0].jar.x, list[0].jar.y))
-                            playerid.Player.equipment.dequip();
-                        if (Instance.Configuration.Instance.QualityCounts)
-                            quality = list[0].jar.item.durability;
-                        peritemprice = decimal.Round(price * (quality / 100.0m), 2);
-                        addmoney += peritemprice;
-                        playerid.Inventory.removeItem(list[0].page,
-                            playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                        list.RemoveAt(0);
-                        amttosell--;
-                    }
-
-                    break;
-                default:
-                    // This is ammo or magazines
-                    var amttosell1 = amttosell;
-                    while (amttosell > 0)
-                    {
-                        if (playerid.Player.equipment.checkSelection(list[0].page, list[0].jar.x, list[0].jar.y))
-                            playerid.Player.equipment.dequip();
-                        if (list[0].jar.item.amount >= amttosell)
-                        {
-                            var left = (byte) (list[0].jar.item.amount - amttosell);
-                            list[0].jar.item.amount = left;
-                            playerid.Inventory.sendUpdateAmount(list[0].page, list[0].jar.x, list[0].jar.y, left);
-                            amttosell = 0;
-                            if (left == 0)
-                            {
-                                playerid.Inventory.removeItem(list[0].page,
-                                    playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                                list.RemoveAt(0);
-                            }
-                        }
-                        else
-                        {
-                            amttosell -= list[0].jar.item.amount;
-                            playerid.Inventory.sendUpdateAmount(list[0].page, list[0].jar.x, list[0].jar.y, 0);
-                            playerid.Inventory.removeItem(list[0].page,
-                                playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                            list.RemoveAt(0);
-                        }
-                    }
-
-                    peritemprice = decimal.Round(price * (amttosell1 / (decimal) vAsset.amount), 2);
-                    addmoney += peritemprice;
-                    break;
-            }
-
-            var balance = Uconomy.Instance.Database.IncreaseBalance(playerid.CSteamID.ToString(), addmoney);
-            message = Instance.Translate("sold_items", amt, name, addmoney,
-                Uconomy.Instance.Configuration.Instance.MoneyName, balance,
-                Uconomy.Instance.Configuration.Instance.MoneyName);
-            Instance.OnShopSell?.Invoke(playerid, addmoney, amt, id);
-            playerid.Player.gameObject.SendMessage("ZaupShopOnSell", new object[] {playerid, addmoney, amt, id},
-                SendMessageOptions.DontRequireReceiver);
-            UnturnedChat.Say(playerid, message);
-
-            return true;
+            Instance.OnShopSell?.Invoke(uPlayer, income, items, itemID);
+            uPlayer.Player.gameObject.SendMessage("ZaupShopOnSell", new object[] {uPlayer, income, items, itemID});
         }
     }
 }
