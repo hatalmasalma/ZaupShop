@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 using Rocket.API;
 using Rocket.Core.Logging;
 using Rocket.Unturned.Chat;
@@ -10,37 +11,45 @@ namespace ZaupShop.Commands
     public class CommandShop : IRocketCommand
     {
         #region Boilerplate
-        
+
         public AllowedCaller AllowedCaller => AllowedCaller.Both;
         public string Name => "shop";
         public string Help => "Allows admins to change, add, or remove items/vehicles from the shop.";
         public string Syntax => "<add | rem | chng | buy> [v.]<itemid> <cost>";
         public List<string> Aliases => new List<string>();
-        public List<string> Permissions => new List<string> {"shop.*", "shop.add", "shop.rem", "shop.chng", "shop.buy"};
-        
+
+        public List<string> Permissions => new List<string>
+            {"shop.*", "shop.add", "shop.rem", "shop.chng", "shop.buy", "shop.group"};
+
         #endregion
-        
-        public void Execute(IRocketPlayer caller, string[] msg)
+
+        public void Execute(IRocketPlayer caller, string[] command)
         {
-            if (msg.Length == 0)
+            if (command.Length == 0)
             {
                 SendMessage(caller, "shop_command_usage");
                 return;
             }
 
-            if (msg.Length < 2)
+            if (command[0] == "group")
+            {
+                ProcessGroupCommand(caller, command);
+                return;
+            }
+
+            if (command.Length < 2)
             {
                 SendMessage(caller, "no_itemid_given");
                 return;
             }
 
-            if (msg.Length == 2 && msg[0] != "rem")
+            if (command.Length == 2 && command[0] != "rem")
             {
                 SendMessage(caller, "no_cost_given");
                 return;
             }
 
-            var type = Parser.getComponentsFromSerial(msg[1], '.');
+            string[] type = Parser.getComponentsFromSerial(command[1], '.');
             if (type.Length > 1 && type[0] != "v")
             {
                 SendMessage(caller, "v_not_provided");
@@ -57,7 +66,7 @@ namespace ZaupShop.Commands
 
             // All basic checks complete.  Let's get down to business.
             var change = false;
-            switch (msg[0])
+            switch (command[0])
             {
                 case "chng":
                     if (!caller.HasPermission("shop.chng"))
@@ -78,7 +87,7 @@ namespace ZaupShop.Commands
                         }
                     }
 
-                    decimal price = decimal.Parse(msg[2]);
+                    decimal price = decimal.Parse(command[2]);
                     if (type[0] == "v")
                     {
                         AddEntry(caller, id, price, change, true);
@@ -121,7 +130,7 @@ namespace ZaupShop.Commands
                     }
 
                     ItemAsset itemAsset = (ItemAsset) potentialItem;
-                    if (!decimal.TryParse(msg[2], out decimal buybackPrice))
+                    if (!decimal.TryParse(command[2], out decimal buybackPrice))
                     {
                         SendMessage(caller, "shop_command_usage");
                         return;
@@ -132,7 +141,7 @@ namespace ZaupShop.Commands
                         SendMessage(caller, "not_in_shop_to_buyback", itemAsset.itemName);
                         return;
                     }
-                    
+
                     SendMessage(caller, "set_buyback_price", itemAsset.itemName, buybackPrice);
                     return;
                 default:
@@ -147,7 +156,7 @@ namespace ZaupShop.Commands
             string ac = change
                 ? ZaupShop.Instance.Translate("changed")
                 : ZaupShop.Instance.Translate("added");
-            
+
             if (vehicle)
             {
                 Asset potentialVehicle = AssetUtils.GetAssetByID(id, true);
@@ -183,7 +192,7 @@ namespace ZaupShop.Commands
                     SendMessage(caller, "error_adding_or_changing", itemAsset.itemName);
                     return;
                 }
-                            
+
                 SendMessage(caller, "changed_or_added_to_shop", ac, itemAsset.itemName, price);
             }
         }
@@ -206,7 +215,7 @@ namespace ZaupShop.Commands
                     SendMessage(caller, "not_in_shop_to_remove", vehicelAsset.vehicleName);
                     return;
                 }
-                            
+
                 SendMessage(caller, "removed_from_shop", vehicelAsset.vehicleName);
             }
             else
@@ -225,19 +234,96 @@ namespace ZaupShop.Commands
                     SendMessage(caller, "not_in_shop_to_remove", itemAsset.itemName);
                     return;
                 }
-                            
+
                 SendMessage(caller, "removed_from_shop", itemAsset.itemName);
             }
         }
-        
-        private void SendMessage(IRocketPlayer recipient, string translationKey, params object[] translationParameters )
+
+        private void SendMessage(IRocketPlayer recipient, string translationKey, params object[] translationParameters)
         {
-            if(recipient is ConsolePlayer)
+            if (recipient is ConsolePlayer)
                 ZaupShop.Instance.TellConsole(translationKey, translationParameters);
             else
             {
                 SteamPlayer playerRecipient = PlayerTool.getSteamPlayer(((UnturnedPlayer) recipient).CSteamID);
                 ZaupShop.Instance.TellPlayer(playerRecipient, translationKey, translationParameters);
+            }
+        }
+
+        private void ProcessGroupCommand(IRocketPlayer caller, string[] command)
+        {
+            if (command.Length == 1 || command.Length > 4)
+            {
+                SendMessage(caller, "shop_group_usage");
+                return;
+            }
+            
+            switch (command[1])
+            {
+                case "create":
+                    if (command.Length != 4)
+                    {
+                        SendMessage(caller, "shop_group_create_usage");
+                        return;
+                    }
+
+                    string groupName = command[2];
+                    string groupType = command[3];
+
+                    switch (groupType)
+                    {
+                        case "wlist":
+                            if (!ZaupShop.Instance.ShopDB.AddGroup(groupName, true))
+                            {
+                                SendMessage(caller, "shop_group_create_failed", groupName);
+                                return;
+                            }
+
+                            SendMessage(caller, "shop_group_created", groupName, groupType);
+                            return;
+                        case "blist":
+                            if (!ZaupShop.Instance.ShopDB.AddGroup(groupName, false))
+                            {
+                                SendMessage(caller, "shop_group_create_failed", groupName);
+                                return;
+                            }
+
+                            SendMessage(caller, "shop_group_created", groupName, groupType);
+                            return;
+                        default:
+                            SendMessage(caller, "shop_group_create_usage");
+                            return;
+                    }
+                case "delgroup":
+                    if (command.Length != 3)
+                    {
+                        SendMessage(caller, "shop_group_del_usage");
+                        return;
+                    }
+
+                    groupName = command[2];
+
+
+
+                    break;
+                case "add":
+                    if (command.Length != 4)
+                    {
+                        SendMessage(caller, "shop_group_change_usage");
+                        return;
+                    }
+
+                    groupName = command[2];
+                    break;
+                case "rem":
+                    if (command.Length != 4)
+                    {
+                        SendMessage(caller, "shop_group_change_usage");
+                        return;
+                    }
+
+                    groupName = command[2];
+                    break;
             }
         }
     }

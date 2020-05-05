@@ -16,6 +16,7 @@ namespace ZaupShop
         public static ZaupShop Instance;
         public string ItemShopTableName;
         public string VehicleShopTableName;
+        public string GroupListTableName;
         
         #region Events
 
@@ -46,7 +47,23 @@ namespace ZaupShop
                 },
                 {
                     "shop_command_usage",
-                    "Usage: /shop <add/rem/chng/buy> [v.]<itemid> <cost>  <cost> is not required for rem, buy is only for items."
+                    "Usage: /shop <add/rem/chng/buy/group> [v.]<itemid> <cost> | <cost> is not required for rem, buy is only for items."
+                },
+                {
+                    "shop_group_usage",
+                    "Usage: /shop group <create/delgroup/add/rem>"
+                },
+                {
+                    "shop_group_create_usage",
+                    "Usage: /shop group create <groupName> <wlist/blist>"
+                },
+                {
+                    "shop_group_del_usage",
+                    "Usage: /shop group delgroup <groupName>"
+                },
+                {
+                    "shop_group_change_usage",
+                    "Usage: /shop group <add/rem> <groupName> [v.]<id>"
                 },
                 {
                     "error_giving_item",
@@ -165,6 +182,14 @@ namespace ZaupShop
                     "added"
                 },
                 {
+                    "shop_group_created",
+                    "You have created a shop group: {0} of type: {1}."
+                },
+                {
+                    "shop_group_create_failed",
+                    "Failed to create shop group: {0}."
+                },
+                {
                     "changed_or_added_to_shop",
                     "You have {0} the {1} with cost {2} to the shop."
                 },
@@ -200,6 +225,7 @@ namespace ZaupShop
 
             ItemShopTableName = Instance.Configuration.Instance.ItemShopTableName;
             VehicleShopTableName = Instance.Configuration.Instance.VehicleShopTableName;
+            GroupListTableName = Instance.Configuration.Instance.GroupListTableName;
             
             ShopDB = new DatabaseMgr();
         }

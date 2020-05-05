@@ -6,6 +6,7 @@ namespace ZaupShop
     {
         public string ItemShopTableName;
         public string VehicleShopTableName;
+        public string GroupListTableName;
         public bool CanBuyItems;
         public bool CanBuyVehicles;
         public bool CanSellItems;
@@ -15,6 +16,7 @@ namespace ZaupShop
         {
             ItemShopTableName = "uconomyitemshop";
             VehicleShopTableName = "uconomyvehicleshop";
+            GroupListTableName = "zaupshopgroups";
             CanBuyItems = true;
             CanBuyVehicles = false;
             CanSellItems = true;

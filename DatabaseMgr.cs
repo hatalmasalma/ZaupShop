@@ -18,6 +18,7 @@ namespace ZaupShop
         {
             string itemShopTableName = ZaupShop.Instance.ItemShopTableName;
             string vehicleShopTableName = ZaupShop.Instance.VehicleShopTableName;
+            string groupsTableName = ZaupShop.Instance.GroupListTableName;
             
             var res = ExecuteQuery(true,
                 $"show tables like '{itemShopTableName}'");
@@ -39,6 +40,12 @@ namespace ZaupShop
             if (res == null)
                 ExecuteQuery(false,
                     $"ALTER TABLE `{itemShopTableName}` ADD `buyback` decimal(15,2) NOT NULL DEFAULT '0.00'");
+
+            res = ExecuteQuery(true, $"show tables like '{groupsTableName}'");
+
+            if (res == null)
+                ExecuteQuery(false,
+                    $"CREATE TABLE `{groupsTableName}` (`name` varchar(32) NOT NULL,`whitelist` tinyint NOT NULL,PRIMARY KEY (`name`))");
         }
 
         private MySqlConnection CreateConnection()
@@ -156,6 +163,26 @@ namespace ZaupShop
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
             return num;
+        }
+
+        public bool AddGroup(string name, bool whitelist)
+        {
+            MySqlParameter nameParameter = new MySqlParameter("@name", name);
+            byte mySQLBool = whitelist ? (byte)1 : (byte)0;
+
+            var newRows = ExecuteQuery(false,
+                $"Insert into `{ZaupShop.Instance.GroupListTableName}` (`name`, `whitelist`) VALUES (@name, '{mySQLBool}');",
+                nameParameter);
+
+            if (newRows == null)
+                return false;
+
+            byte numberRows = byte.Parse(newRows.ToString());
+
+            ExecuteQuery(false,
+                $"CREATE TABLE `{name}` (`id` smallint UNSIGNED NOT NULL,`vehicle` tinyint NOT NULL,PRIMARY KEY (`id`))");
+
+            return numberRows != 0;
         }
 
         /// <summary>
