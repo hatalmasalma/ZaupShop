@@ -14,15 +14,20 @@ namespace ZaupShop
     {
         public DatabaseMgr ShopDB;
         public static ZaupShop Instance;
+        public string ItemShopTableName;
+        public string VehicleShopTableName;
+        
+        #region Events
 
         public delegate void PlayerShopBuy(UnturnedPlayer player, decimal totalCost, byte itemAmount, ushort itemID,
             string type = "item");
 
-        public event PlayerShopBuy OnShopBuy;
-
         public delegate void PlayerShopSell(UnturnedPlayer player, decimal totalIncome, byte itemAmount, ushort itemID);
 
+        public event PlayerShopBuy OnShopBuy;
         public event PlayerShopSell OnShopSell;
+        
+        #endregion
 
         public override TranslationList DefaultTranslations =>
             new TranslationList
@@ -192,6 +197,10 @@ namespace ZaupShop
         protected override void Load()
         {
             Instance = this;
+
+            ItemShopTableName = Instance.Configuration.Instance.ItemShopTableName;
+            VehicleShopTableName = Instance.Configuration.Instance.VehicleShopTableName;
+            
             ShopDB = new DatabaseMgr();
         }
 

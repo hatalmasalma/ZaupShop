@@ -14,28 +14,31 @@ namespace ZaupShop
             CheckSchema();
         }
 
-        internal void CheckSchema()
+        private void CheckSchema()
         {
+            string itemShopTableName = ZaupShop.Instance.ItemShopTableName;
+            string vehicleShopTableName = ZaupShop.Instance.VehicleShopTableName;
+            
             var res = ExecuteQuery(true,
-                $"show tables like '{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}'");
+                $"show tables like '{itemShopTableName}'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{itemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
-                $"show tables like '{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}'");
+                $"show tables like '{vehicleShopTableName}'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{vehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
-                $"show columns from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` like 'buyback'");
+                $"show columns from `{itemShopTableName}` like 'buyback'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"ALTER TABLE `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` ADD `buyback` decimal(15,2) NOT NULL DEFAULT '0.00'");
+                    $"ALTER TABLE `{itemShopTableName}` ADD `buyback` decimal(15,2) NOT NULL DEFAULT '0.00'");
         }
 
         private MySqlConnection CreateConnection()
@@ -60,8 +63,8 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set itemname=@name, cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                    ? $"update `{ZaupShop.Instance.ItemShopTableName}` set itemname=@name, cost='{cost}' where id='{id}';"
+                    : $"Insert into `{ZaupShop.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
             if (affected == null) return false;
@@ -75,8 +78,8 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` set vehiclename=@name, cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                    ? $"update `{ZaupShop.Instance.VehicleShopTableName}` set vehiclename=@name, cost='{cost}' where id='{id}';"
+                    : $"Insert into `{ZaupShop.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
             if (affected == null) return false;
@@ -90,7 +93,7 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `cost` from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where `id` = '{id}';");
+                $"select `cost` from `{ZaupShop.Instance.ItemShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
@@ -101,7 +104,7 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `cost` from `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` where `id` = '{id}';");
+                $"select `cost` from `{ZaupShop.Instance.VehicleShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
@@ -111,7 +114,7 @@ namespace ZaupShop
         public bool DeleteItem(int id)
         {
             var affected = ExecuteQuery(false,
-                $"delete from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where id='{id}';");
+                $"delete from `{ZaupShop.Instance.ItemShopTableName}` where id='{id}';");
 
             if (affected == null) return false;
 
@@ -123,7 +126,7 @@ namespace ZaupShop
         public bool DeleteVehicle(int id)
         {
             var affected = ExecuteQuery(false,
-                $"delete from `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` where id='{id}';");
+                $"delete from `{ZaupShop.Instance.VehicleShopTableName}` where id='{id}';");
 
             if (affected == null) return false;
 
@@ -135,7 +138,7 @@ namespace ZaupShop
         public bool SetBuyPrice(int id, decimal cost)
         {
             var affected = ExecuteQuery(false,
-                $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set `buyback`='{cost}' where id='{id}';");
+                $"update `{ZaupShop.Instance.ItemShopTableName}` set `buyback`='{cost}' where id='{id}';");
 
             if (affected == null) return false;
 
@@ -148,7 +151,7 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `buyback` from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where `id` = '{id}';");
+                $"select `buyback` from `{ZaupShop.Instance.ItemShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 

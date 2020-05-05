@@ -22,9 +22,6 @@ namespace ZaupShop.Commands
         
         public void Execute(IRocketPlayer caller, string[] msg)
         {
-            string[] permnames = {"shop.*", "shop.add", "shop.rem", "shop.chng", "shop.buy"};
-            bool[] perms = {false, false, false, false, false};
-
             if (msg.Length == 0)
             {
                 SendMessage(caller, "shop_command_usage");
@@ -116,7 +113,7 @@ namespace ZaupShop.Commands
                         return;
                     }
 
-                    Asset potentialItem = GetAsset(id, false);
+                    Asset potentialItem = AssetUtils.GetAssetByID(id, false);
                     if (potentialItem == null)
                     {
                         SendMessage(caller, "invalid_id_given");
@@ -140,7 +137,7 @@ namespace ZaupShop.Commands
                     return;
                 default:
                     // We shouldn't get this, but if we do send an error.
-                    SendMessage(caller, "not_in_shop_to_remove");
+                    SendMessage(caller, "shop_command_usage");
                     return;
             }
         }
@@ -153,7 +150,7 @@ namespace ZaupShop.Commands
             
             if (vehicle)
             {
-                Asset potentialVehicle = GetAsset(id, true);
+                Asset potentialVehicle = AssetUtils.GetAssetByID(id, true);
                 if (potentialVehicle == null)
                 {
                     SendMessage(caller, "invalid_id_given");
@@ -172,7 +169,7 @@ namespace ZaupShop.Commands
             }
             else
             {
-                Asset potentialItem = GetAsset(id, false);
+                Asset potentialItem = AssetUtils.GetAssetByID(id, false);
                 if (potentialItem == null)
                 {
                     SendMessage(caller, "invalid_id_given");
@@ -195,7 +192,7 @@ namespace ZaupShop.Commands
         {
             if (vehicle)
             {
-                Asset potentialVehicle = GetAsset(id, true);
+                Asset potentialVehicle = AssetUtils.GetAssetByID(id, true);
                 if (potentialVehicle == null)
                 {
                     SendMessage(caller, "invalid_id_given");
@@ -214,7 +211,7 @@ namespace ZaupShop.Commands
             }
             else
             {
-                Asset potentialItem = GetAsset(id, false);
+                Asset potentialItem = AssetUtils.GetAssetByID(id, false);
                 if (potentialItem == null)
                 {
                     SendMessage(caller, "invalid_id_given");
@@ -232,9 +229,7 @@ namespace ZaupShop.Commands
                 SendMessage(caller, "removed_from_shop", itemAsset.itemName);
             }
         }
-
-        private Asset GetAsset(ushort id, bool vehicle) => Assets.find(vehicle ? EAssetType.VEHICLE : EAssetType.ITEM, id);
-
+        
         private void SendMessage(IRocketPlayer recipient, string translationKey, params object[] translationParameters )
         {
             if(recipient is ConsolePlayer)

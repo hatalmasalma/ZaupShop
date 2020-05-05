@@ -59,5 +59,7 @@ namespace ZaupShop
 
             return itemAsset;
         }
+        
+        public static Asset GetAssetByID(ushort id, bool vehicle) => Assets.find(vehicle ? EAssetType.VEHICLE : EAssetType.ITEM, id);
     }
 }
