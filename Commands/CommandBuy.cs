@@ -73,7 +73,7 @@ namespace ZaupShop.Commands
                         return;
                     }
 
-                    BuyItem(components[1], amttobuy, uPlayer, steamPlayer);
+                    BuyItem(components[0], amttobuy, uPlayer, steamPlayer);
                     break;
             }
         }

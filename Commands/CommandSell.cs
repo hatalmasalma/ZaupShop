@@ -82,11 +82,11 @@ namespace ZaupShop.Commands
 
             if (itemAmount > 1)
             {
-                byte ammoMags = 0;
+                byte magazineAmmo = 0;
                 foreach (InventorySearch item in playerItems)
-                    ammoMags += item.jar.item.amount;
+                    magazineAmmo += item.jar.item.amount;
 
-                if (ammoMags < amount)
+                if (magazineAmmo < amount)
                 {
                     ZaupShop.Instance.TellPlayer(steamPlayer, "not_enough_ammo_sell", itemName);
                     return;
@@ -101,7 +101,7 @@ namespace ZaupShop.Commands
                 return;
             }
 
-            decimal income = 0;
+            decimal income;
             
             switch (itemAmount)
             {

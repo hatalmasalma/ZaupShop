@@ -41,10 +41,10 @@ namespace ZaupShop.Commands
             switch (command[0])
             {
                 case "v":
-                    GetVehiclePrice(command[1], steamPlayer);
+                    GetVehiclePrice(command[0], steamPlayer);
                     break;
                 default:
-                    GetItemPrice(command[1], steamPlayer);
+                    GetItemPrice(command[0], steamPlayer);
                     break;
             }
         }
