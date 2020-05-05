@@ -6,6 +6,7 @@ using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using UnityEngine;
+using Logger = Rocket.Core.Logging.Logger;
 
 namespace ZaupShop
 {
@@ -203,6 +204,8 @@ namespace ZaupShop
         public void TellPlayer(SteamPlayer player, string translationKey, params object[] translationParameters) =>
             ChatManager.serverSendMessage(Instance.Translate(translationKey, translationParameters), Palette.SERVER,
                 toPlayer: player);
+
+        public void TellConsole(string translationKey, params object[] translationParameters) => Logger.Log(Instance.Translate(translationKey, translationParameters));
 
         public void RaiseBuyVehicle(UnturnedPlayer player, decimal price, ushort vehicleID)
         {

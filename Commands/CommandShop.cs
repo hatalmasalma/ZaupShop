@@ -22,275 +22,228 @@ namespace ZaupShop.Commands
         
         public void Execute(IRocketPlayer caller, string[] msg)
         {
-            var console = caller is ConsolePlayer;
             string[] permnames = {"shop.*", "shop.add", "shop.rem", "shop.chng", "shop.buy"};
             bool[] perms = {false, false, false, false, false};
-            var anyuse = false;
-            string message;
-            foreach (var s in caller.GetPermissions())
-                switch (s.Name)
-                {
-                    case "shop.*":
-                        perms[0] = true;
-                        anyuse = true;
-                        break;
-                    case "shop.add":
-                        perms[1] = true;
-                        anyuse = true;
-                        break;
-                    case "shop.rem":
-                        perms[2] = true;
-                        anyuse = true;
-                        break;
-                    case "shop.chng":
-                        perms[3] = true;
-                        anyuse = true;
-                        break;
-                    case "shop.buy":
-                        perms[4] = true;
-                        anyuse = true;
-                        break;
-                    case "*":
-                        perms[0] = true;
-                        perms[1] = true;
-                        perms[2] = true;
-                        perms[3] = true;
-                        perms[4] = true;
-                        anyuse = true;
-                        break;
-                }
-
-            if (console || ((UnturnedPlayer) caller).IsAdmin)
-            {
-                perms[0] = true;
-                perms[1] = true;
-                perms[2] = true;
-                perms[3] = true;
-                perms[4] = true;
-                anyuse = true;
-            }
-
-            if (!anyuse)
-            {
-                // Assume this is a player
-                UnturnedChat.Say(caller, "You don't have permission to use the /shop command.");
-                return;
-            }
 
             if (msg.Length == 0)
             {
-                message = ZaupShop.Instance.Translate("shop_command_usage");
-                // We are going to print how to use
-                SendMessage(caller, message, console);
+                SendMessage(caller, "shop_command_usage");
                 return;
             }
 
             if (msg.Length < 2)
             {
-                message = ZaupShop.Instance.Translate("no_itemid_given");
-                SendMessage(caller, message, console);
+                SendMessage(caller, "no_itemid_given");
                 return;
             }
 
             if (msg.Length == 2 && msg[0] != "rem")
             {
-                message = ZaupShop.Instance.Translate("no_cost_given");
-                SendMessage(caller, message, console);
+                SendMessage(caller, "no_cost_given");
+                return;
             }
-            else if (msg.Length >= 2)
+
+            var type = Parser.getComponentsFromSerial(msg[1], '.');
+            if (type.Length > 1 && type[0] != "v")
             {
-                var type = Parser.getComponentsFromSerial(msg[1], '.');
-                if (type.Length > 1 && type[0] != "v")
+                SendMessage(caller, "v_not_provided");
+                return;
+            }
+
+            string unprocessedID = type.Length > 1 ? type[1] : type[0];
+
+            if (!ushort.TryParse(unprocessedID, out ushort id))
+            {
+                SendMessage(caller, "invalid_id_given");
+                return;
+            }
+
+            // All basic checks complete.  Let's get down to business.
+            var change = false;
+            switch (msg[0])
+            {
+                case "chng":
+                    if (!caller.HasPermission("shop.chng"))
+                    {
+                        SendMessage(caller, "no_permission_shop_chng");
+                        return;
+                    }
+
+                    change = true;
+                    goto case "add";
+                case "add":
+                    if (!change)
+                    {
+                        if (!caller.HasPermission("shop.add"))
+                        {
+                            SendMessage(caller, "no_permission_shop_add");
+                            return;
+                        }
+                    }
+
+                    decimal price = decimal.Parse(msg[2]);
+                    if (type[0] == "v")
+                    {
+                        AddEntry(caller, id, price, change, true);
+                        return;
+                    }
+                    else
+                    {
+                        AddEntry(caller, id, price, change, false);
+                        return;
+                    }
+                case "rem":
+                    if (!caller.HasPermission("shop.rem"))
+                    {
+                        SendMessage(caller, "no_permission_shop_rem");
+                        return;
+                    }
+
+                    if (type[0] == "v")
+                    {
+                        DeleteEntry(caller, id, true);
+                        return;
+                    }
+                    else
+                    {
+                        DeleteEntry(caller, id, false);
+                        return;
+                    }
+                case "buy":
+                    if (!caller.HasPermission("shop.buy"))
+                    {
+                        SendMessage(caller, "no_permission_shop_buy");
+                        return;
+                    }
+
+                    Asset potentialItem = GetAsset(id, false);
+                    if (potentialItem == null)
+                    {
+                        SendMessage(caller, "invalid_id_given");
+                        return;
+                    }
+
+                    ItemAsset itemAsset = (ItemAsset) potentialItem;
+                    if (!decimal.TryParse(msg[2], out decimal buybackPrice))
+                    {
+                        SendMessage(caller, "shop_command_usage");
+                        return;
+                    }
+
+                    if (!ZaupShop.Instance.ShopDB.SetBuyPrice(id, buybackPrice))
+                    {
+                        SendMessage(caller, "not_in_shop_to_buyback", itemAsset.itemName);
+                        return;
+                    }
+                    
+                    SendMessage(caller, "set_buyback_price", itemAsset.itemName, buybackPrice);
+                    return;
+                default:
+                    // We shouldn't get this, but if we do send an error.
+                    SendMessage(caller, "not_in_shop_to_remove");
+                    return;
+            }
+        }
+
+        private void AddEntry(IRocketPlayer caller, ushort id, decimal price, bool change, bool vehicle)
+        {
+            string ac = change
+                ? ZaupShop.Instance.Translate("changed")
+                : ZaupShop.Instance.Translate("added");
+            
+            if (vehicle)
+            {
+                Asset potentialVehicle = GetAsset(id, true);
+                if (potentialVehicle == null)
                 {
-                    message = ZaupShop.Instance.Translate("v_not_provided");
-                    SendMessage(caller, message, console);
+                    SendMessage(caller, "invalid_id_given");
                     return;
                 }
 
-                ushort id;
-                if (type.Length > 1)
+                VehicleAsset vehicleAsset = (VehicleAsset) potentialVehicle;
+
+                if (!ZaupShop.Instance.ShopDB.AddVehicle(id, vehicleAsset.vehicleName, price, change))
                 {
-                    if (!ushort.TryParse(type[1], out id))
-                    {
-                        message = ZaupShop.Instance.Translate("invalid_id_given");
-                        SendMessage(caller, message, console);
-                        return;
-                    }
-                }
-                else
-                {
-                    if (!ushort.TryParse(type[0], out id))
-                    {
-                        message = ZaupShop.Instance.Translate("invalid_id_given");
-                        SendMessage(caller, message, console);
-                        return;
-                    }
+                    SendMessage(caller, "error_adding_or_changing", vehicleAsset.vehicleName);
+                    return;
                 }
 
-                // All basic checks complete.  Let's get down to business.
-                var success = false;
-                var change = false;
-                var pass = false;
-                switch (msg[0])
-                {
-                    case "chng":
-                        if (!perms[3] && !perms[0])
-                        {
-                            message = ZaupShop.Instance.Translate("no_permission_shop_chng");
-                            SendMessage(caller, message, console);
-                            return;
-                        }
-
-                        change = true;
-                        pass = true;
-                        goto case "add";
-                    case "add":
-                        if (!pass)
-                            if (!perms[1] && !perms[0])
-                            {
-                                message = ZaupShop.Instance.Translate("no_permission_shop_add");
-                                SendMessage(caller, message, console);
-                                return;
-                            }
-
-                        var ac = pass
-                            ? ZaupShop.Instance.Translate("changed")
-                            : ZaupShop.Instance.Translate("added");
-                        switch (type[0])
-                        {
-                            case "v":
-                                if (!IsAsset(id, "v"))
-                                {
-                                    message = ZaupShop.Instance.Translate("invalid_id_given");
-                                    SendMessage(caller, message, console);
-                                    return;
-                                }
-
-                                var va = (VehicleAsset) Assets.find(EAssetType.VEHICLE, id);
-                                message = ZaupShop.Instance.Translate("changed_or_added_to_shop", ac, va.vehicleName,
-                                    msg[2]);
-                                success = ZaupShop.Instance.ShopDB.AddVehicle(id, va.vehicleName,
-                                    decimal.Parse(msg[2]), change);
-                                if (!success)
-                                    message = ZaupShop.Instance.Translate("error_adding_or_changing", va.vehicleName);
-                                SendMessage(caller, message, console);
-                                break;
-                            default:
-                                if (!IsAsset(id, "i"))
-                                {
-                                    message = ZaupShop.Instance.Translate("invalid_id_given");
-                                    SendMessage(caller, message, console);
-                                    return;
-                                }
-
-                                var ia = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-                                message = ZaupShop.Instance.Translate("changed_or_added_to_shop", ac, ia.itemName,
-                                    msg[2]);
-                                success = ZaupShop.Instance.ShopDB.AddItem(id, ia.itemName, decimal.Parse(msg[2]),
-                                    change);
-                                if (!success)
-                                    message = ZaupShop.Instance.Translate("error_adding_or_changing", ia.itemName);
-                                SendMessage(caller, message, console);
-                                break;
-                        }
-
-                        break;
-                    case "rem":
-                        if (!perms[2] && !perms[0])
-                        {
-                            message = ZaupShop.Instance.Translate("no_permission_shop_rem");
-                            SendMessage(caller, message, console);
-                            return;
-                        }
-
-                        switch (type[0])
-                        {
-                            case "v":
-                                if (!IsAsset(id, "v"))
-                                {
-                                    message = ZaupShop.Instance.Translate("invalid_id_given");
-                                    SendMessage(caller, message, console);
-                                    return;
-                                }
-
-                                var va = (VehicleAsset) Assets.find(EAssetType.VEHICLE, id);
-                                message = ZaupShop.Instance.Translate("removed_from_shop", va.vehicleName);
-                                success = ZaupShop.Instance.ShopDB.DeleteVehicle(id);
-                                if (!success)
-                                    message = ZaupShop.Instance.Translate("not_in_shop_to_remove", va.vehicleName);
-                                SendMessage(caller, message, console);
-                                break;
-                            default:
-                                if (!IsAsset(id, "i"))
-                                {
-                                    message = ZaupShop.Instance.Translate("invalid_id_given");
-                                    SendMessage(caller, message, console);
-                                    return;
-                                }
-
-                                var ia = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-                                message = ZaupShop.Instance.Translate("removed_from_shop", ia.itemName);
-                                success = ZaupShop.Instance.ShopDB.DeleteItem(id);
-                                if (!success)
-                                    message = ZaupShop.Instance.Translate("not_in_shop_to_remove", ia.itemName);
-                                SendMessage(caller, message, console);
-                                break;
-                        }
-
-                        break;
-                    case "buy":
-                        if (!perms[4] && !perms[0])
-                        {
-                            message = ZaupShop.Instance.Translate("no_permission_shop_buy");
-                            SendMessage(caller, message, console);
-                            return;
-                        }
-
-                        if (!IsAsset(id, "i"))
-                        {
-                            message = ZaupShop.Instance.Translate("invalid_id_given");
-                            SendMessage(caller, message, console);
-                            return;
-                        }
-
-                        var iab = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-                        decimal.TryParse(msg[2], out var buyb);
-                        message = ZaupShop.Instance.Translate("set_buyback_price", iab.itemName, buyb.ToString());
-                        success = ZaupShop.Instance.ShopDB.SetBuyPrice(id, buyb);
-                        if (!success)
-                            message = ZaupShop.Instance.Translate("not_in_shop_to_buyback", iab.itemName);
-                        SendMessage(caller, message, console);
-                        break;
-                    default:
-                        // We shouldn't get this, but if we do send an error.
-                        message = ZaupShop.Instance.Translate("not_in_shop_to_remove");
-
-                        SendMessage(caller, message, console);
-                        return;
-                }
+                SendMessage(caller, "changed_or_added_to_shop", ac, vehicleAsset.vehicleName, price);
             }
-        }
-
-        private bool IsAsset(ushort id, string type)
-        {
-            // Check for valid Item/Vehicle Id.
-            switch (type)
-            {
-                case "i":
-                    return Assets.find(EAssetType.ITEM, id) != null;
-                case "v":
-                    return Assets.find(EAssetType.VEHICLE, id) != null;
-                default:
-                    return false;
-            }
-        }
-
-        private void SendMessage(IRocketPlayer caller, string message, bool console)
-        {
-            if (console)
-                Logger.Log(message);
             else
-                UnturnedChat.Say(caller, message);
+            {
+                Asset potentialItem = GetAsset(id, false);
+                if (potentialItem == null)
+                {
+                    SendMessage(caller, "invalid_id_given");
+                    return;
+                }
+
+                ItemAsset itemAsset = (ItemAsset) potentialItem;
+
+                if (!ZaupShop.Instance.ShopDB.AddItem(id, itemAsset.itemName, price, change))
+                {
+                    SendMessage(caller, "error_adding_or_changing", itemAsset.itemName);
+                    return;
+                }
+                            
+                SendMessage(caller, "changed_or_added_to_shop", ac, itemAsset.itemName, price);
+            }
+        }
+
+        private void DeleteEntry(IRocketPlayer caller, ushort id, bool vehicle)
+        {
+            if (vehicle)
+            {
+                Asset potentialVehicle = GetAsset(id, true);
+                if (potentialVehicle == null)
+                {
+                    SendMessage(caller, "invalid_id_given");
+                    return;
+                }
+
+                VehicleAsset vehicelAsset = (VehicleAsset) potentialVehicle;
+
+                if (!ZaupShop.Instance.ShopDB.DeleteVehicle(id))
+                {
+                    SendMessage(caller, "not_in_shop_to_remove", vehicelAsset.vehicleName);
+                    return;
+                }
+                            
+                SendMessage(caller, "removed_from_shop", vehicelAsset.vehicleName);
+            }
+            else
+            {
+                Asset potentialItem = GetAsset(id, false);
+                if (potentialItem == null)
+                {
+                    SendMessage(caller, "invalid_id_given");
+                    return;
+                }
+
+                ItemAsset itemAsset = (ItemAsset) potentialItem;
+
+                if (!ZaupShop.Instance.ShopDB.DeleteItem(id))
+                {
+                    SendMessage(caller, "not_in_shop_to_remove", itemAsset.itemName);
+                    return;
+                }
+                            
+                SendMessage(caller, "removed_from_shop", itemAsset.itemName);
+            }
+        }
+
+        private Asset GetAsset(ushort id, bool vehicle) => Assets.find(vehicle ? EAssetType.VEHICLE : EAssetType.ITEM, id);
+
+        private void SendMessage(IRocketPlayer recipient, string translationKey, params object[] translationParameters )
+        {
+            if(recipient is ConsolePlayer)
+                ZaupShop.Instance.TellConsole(translationKey, translationParameters);
+            else
+            {
+                SteamPlayer playerRecipient = PlayerTool.getSteamPlayer(((UnturnedPlayer) recipient).CSteamID);
+                ZaupShop.Instance.TellPlayer(playerRecipient, translationKey, translationParameters);
+            }
         }
     }
 }
