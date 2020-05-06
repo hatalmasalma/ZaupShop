@@ -61,5 +61,23 @@ namespace ZaupShop
         }
         
         public static Asset GetAssetByID(ushort id, bool vehicle) => Assets.find(vehicle ? EAssetType.VEHICLE : EAssetType.ITEM, id);
+
+        public static ushort? GetAssetIDBySearch(string searchTerm, out bool vehicle)
+        {
+            vehicle = false;
+            string[] type = Parser.getComponentsFromSerial(searchTerm, '.');
+            if (type.Length > 1 && type[0] != "v")
+                return null;
+
+            string unprocessedID = type.Length > 1 ? type[1] : type[0];
+
+            if (!ushort.TryParse(unprocessedID, out ushort id))
+                return null;
+
+            if (type[0] == "v")
+                vehicle = true;
+
+            return id;
+        }
     }
 }

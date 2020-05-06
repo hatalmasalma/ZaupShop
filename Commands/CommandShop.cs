@@ -257,6 +257,31 @@ namespace ZaupShop.Commands
                 SendMessage(caller, "shop_group_usage");
                 return;
             }
+
+            ushort ID = 0;
+            bool vehicle = false;
+
+            if (command[1] == "add" || command[1] == "rem")
+            {
+                if (command.Length != 4)
+                {
+                    if (command.Length != 4)
+                    {
+                        SendMessage(caller, "shop_group_change_usage");
+                        return;
+                    }
+                }
+
+                ushort? potentialID = AssetUtils.GetAssetIDBySearch(command[3], out vehicle);
+
+                if (!potentialID.HasValue)
+                {
+                    SendMessage(caller, "could_not_find", command[3]);
+                    return;
+                }
+
+                ID = potentialID.Value;
+            }
             
             switch (command[1])
             {
@@ -312,23 +337,30 @@ namespace ZaupShop.Commands
                     SendMessage(caller, "shop_group_deleted", groupName);
                     return;
                 case "add":
-                    if (command.Length != 4)
+                    groupName = command[2];
+
+                    if (!ZaupShop.Instance.ShopDB.AddIDToGroup(groupName, ID, vehicle))
                     {
-                        SendMessage(caller, "shop_group_change_usage");
+                        SendMessage(caller, "shop_group_add_failed", ID, groupName);
                         return;
                     }
 
-                    groupName = command[2];
-                    break;
+                    SendMessage(caller, "shop_group_added_id", ID, groupName);
+                    return;
                 case "rem":
-                    if (command.Length != 4)
+                    groupName = command[2];
+                    
+                    if (!ZaupShop.Instance.ShopDB.RemoveIDFromGroup(groupName, ID, vehicle))
                     {
-                        SendMessage(caller, "shop_group_change_usage");
+                        SendMessage(caller, "shop_group_remove_failed", ID, groupName);
                         return;
                     }
 
-                    groupName = command[2];
-                    break;
+                    SendMessage(caller, "shop_group_removed_id", ID, groupName);
+                    return;
+                default:
+                    SendMessage(caller, "shop_group_usage");
+                    return;
             }
         }
     }

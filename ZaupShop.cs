@@ -198,6 +198,22 @@ namespace ZaupShop
                     "Failed to delete shop group: {0}."
                 },
                 {
+                    "shop_group_added_id",
+                    "You added ID: {0} to shop group: {1}."
+                },
+                {
+                    "shop_group_add_failed",
+                    "Failed to add ID: {0} to shop group: {1}."
+                },
+                {
+                    "shop_group_removed_id",
+                    "You removed ID: {0} from shop group: {1}."
+                },
+                {
+                    "shop_group_remove_failed",
+                    "Failed to remove ID: {0} from shop group: {1}."
+                },
+                {
                     "changed_or_added_to_shop",
                     "You have {0} the {1} with cost {2} to the shop."
                 },

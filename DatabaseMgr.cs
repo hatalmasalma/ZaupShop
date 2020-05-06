@@ -167,7 +167,6 @@ namespace ZaupShop
 
         public bool AddGroup(string name, bool whitelist)
         {
-            int newRows;
             byte mySQLBool = whitelist ? (byte) 1 : (byte) 0;
             string commandText =
                 $"Insert into `{ZaupShop.Instance.GroupListTableName}` (`name`, `whitelist`) VALUES (@name, '{mySQLBool}');";
@@ -177,10 +176,10 @@ namespace ZaupShop
             if (rowsObject == null)
                 return false;
 
-            newRows = int.Parse(rowsObject.ToString());
+            byte newRows = byte.Parse(rowsObject.ToString());
 
             commandText =
-                $"CREATE TABLE `{name}` (`id` smallint UNSIGNED NOT NULL,`vehicle` tinyint NOT NULL,PRIMARY KEY (`id`))";
+                $"CREATE TABLE `{name}` (`id` smallint UNSIGNED NOT NULL AUTO_INCREMENT, `assetid` smallint UNSIGNED NOT NULL, `vehicle` tinyint NOT NULL, PRIMARY KEY (`id`))";
 
             ExecuteQuery(false, commandText);
 
@@ -189,7 +188,6 @@ namespace ZaupShop
 
         public bool DelGroup(string name)
         {
-            int goneRows;
             string commandText =
                 $"DELETE FROM `{ZaupShop.Instance.GroupListTableName}` WHERE `name` = @name;";
 
@@ -198,11 +196,41 @@ namespace ZaupShop
             if (rowsObject == null)
                 return false;
 
-            goneRows = int.Parse(rowsObject.ToString());
+            byte goneRows = byte.Parse(rowsObject.ToString());
 
             commandText = $"DROP TABLE `{name}`;";
             
             ExecuteQuery(false, commandText);
+
+            return goneRows == 1;
+        }
+
+        public bool AddIDToGroup(string groupName, ushort id, bool vehicle)
+        {
+            byte mySQLBool = vehicle ? (byte) 1 : (byte) 0;
+            string commandText = $"INSERT INTO `{groupName}` (`assetid`, `vehicle`) VALUES ('{id}', '{mySQLBool}');";
+
+            var rowsObject = ExecuteQuery(false, commandText);
+
+            if (rowsObject == null)
+                return false;
+            
+            byte newRows = byte.Parse(rowsObject.ToString());
+
+            return newRows == 1;
+        }
+
+        public bool RemoveIDFromGroup(string groupName, ushort id, bool vehicle)
+        {
+            byte mySQLBool = vehicle ? (byte) 1 : (byte) 0;
+            string commandText = $"DELETE FROM `{groupName}` WHERE `assetid` = '{id}' AND `vehicle` = '{mySQLBool}';";
+
+            var rowsObject = ExecuteQuery(false, commandText);
+
+            if (rowsObject == null)
+                return false;
+            
+            byte goneRows = byte.Parse(rowsObject.ToString());
 
             return goneRows == 1;
         }
