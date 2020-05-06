@@ -167,22 +167,44 @@ namespace ZaupShop
 
         public bool AddGroup(string name, bool whitelist)
         {
-            MySqlParameter nameParameter = new MySqlParameter("@name", name);
-            byte mySQLBool = whitelist ? (byte)1 : (byte)0;
+            int newRows;
+            byte mySQLBool = whitelist ? (byte) 1 : (byte) 0;
+            string commandText =
+                $"Insert into `{ZaupShop.Instance.GroupListTableName}` (`name`, `whitelist`) VALUES (@name, '{mySQLBool}');";
 
-            var newRows = ExecuteQuery(false,
-                $"Insert into `{ZaupShop.Instance.GroupListTableName}` (`name`, `whitelist`) VALUES (@name, '{mySQLBool}');",
-                nameParameter);
+            var rowsObject = ExecuteQuery(false, commandText, new MySqlParameter("@name", name));
 
-            if (newRows == null)
+            if (rowsObject == null)
                 return false;
 
-            byte numberRows = byte.Parse(newRows.ToString());
+            newRows = int.Parse(rowsObject.ToString());
 
-            ExecuteQuery(false,
-                $"CREATE TABLE `{name}` (`id` smallint UNSIGNED NOT NULL,`vehicle` tinyint NOT NULL,PRIMARY KEY (`id`))");
+            commandText =
+                $"CREATE TABLE `{name}` (`id` smallint UNSIGNED NOT NULL,`vehicle` tinyint NOT NULL,PRIMARY KEY (`id`))";
 
-            return numberRows != 0;
+            ExecuteQuery(false, commandText);
+
+            return newRows == 1;
+        }
+
+        public bool DelGroup(string name)
+        {
+            int goneRows;
+            string commandText =
+                $"DELETE FROM `{ZaupShop.Instance.GroupListTableName}` WHERE `name` = @name;";
+
+            var rowsObject = ExecuteQuery(false, commandText, new MySqlParameter("@name", name));
+
+            if (rowsObject == null)
+                return false;
+
+            goneRows = int.Parse(rowsObject.ToString());
+
+            commandText = $"DROP TABLE `{name}`;";
+            
+            ExecuteQuery(false, commandText);
+
+            return goneRows == 1;
         }
 
         /// <summary>

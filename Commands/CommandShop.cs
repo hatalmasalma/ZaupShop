@@ -303,9 +303,14 @@ namespace ZaupShop.Commands
 
                     groupName = command[2];
 
-
-
-                    break;
+                    if (!ZaupShop.Instance.ShopDB.DelGroup(groupName))
+                    {
+                        SendMessage(caller, "shop_group_delete_failed", groupName);
+                        return;
+                    }
+                    
+                    SendMessage(caller, "shop_group_deleted", groupName);
+                    return;
                 case "add":
                     if (command.Length != 4)
                     {

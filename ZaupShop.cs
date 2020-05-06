@@ -183,11 +183,19 @@ namespace ZaupShop
                 },
                 {
                     "shop_group_created",
-                    "You have created a shop group: {0} of type: {1}."
+                    "You created a shop group: {0} of type: {1}."
                 },
                 {
                     "shop_group_create_failed",
                     "Failed to create shop group: {0}."
+                },
+                {
+                    "shop_group_deleted",
+                    "You deleted the shop group: {0}."
+                },
+                {
+                    "shop_group_delete_failed",
+                    "Failed to delete shop group: {0}."
                 },
                 {
                     "changed_or_added_to_shop",
