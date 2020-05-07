@@ -97,7 +97,7 @@ namespace ZaupShop.Commands
                 return;
             }
 
-            if (ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, vehicleID, true))
+            if (!ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, vehicleID, true))
             {
                 ZaupShop.Instance.TellPlayer(steamPlayer, "not_whitelisted", vehicleName);
                 return;
@@ -155,7 +155,7 @@ namespace ZaupShop.Commands
                 return;
             }
 
-            if (ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, itemID, false))
+            if (!ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, itemID, false))
             {
                 ZaupShop.Instance.TellPlayer(steamPlayer, "not_whitelisted", itemName);
                 return;

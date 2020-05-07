@@ -256,7 +256,6 @@ namespace ZaupShop
 
                 connection.Open();
                 using MySqlDataReader reader = command.ExecuteReader();
-                connection.Close();
                 
                 while (reader.Read())
                 {
@@ -291,7 +290,6 @@ namespace ZaupShop
 
                 connection.Open();
                 using MySqlDataReader reader = command.ExecuteReader();
-                connection.Close();
                 
                 while (reader.Read())
                 {
