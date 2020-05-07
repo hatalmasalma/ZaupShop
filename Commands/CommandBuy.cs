@@ -90,6 +90,18 @@ namespace ZaupShop.Commands
             
             ushort vehicleID = vehicleAsset.id;
             string vehicleName = vehicleAsset.vehicleName;
+            
+            if (ZaupShop.Instance.GroupManager.IsBlacklisted(uPlayer, vehicleID, true))
+            {
+                ZaupShop.Instance.TellPlayer(steamPlayer, "blacklisted", vehicleName);
+                return;
+            }
+
+            if (ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, vehicleID, true))
+            {
+                ZaupShop.Instance.TellPlayer(steamPlayer, "not_whitelisted", vehicleName);
+                return;
+            }
 
             decimal vehiclePrice = ZaupShop.Instance.ShopDB.GetVehicleCost(vehicleID);
             decimal playerBalance = Uconomy.Instance.Database.GetBalance(uPlayer.CSteamID.ToString());
@@ -136,6 +148,18 @@ namespace ZaupShop.Commands
 
             ushort itemID = itemAsset.id;
             string itemName = itemAsset.itemName;
+
+            if (ZaupShop.Instance.GroupManager.IsBlacklisted(uPlayer, itemID, false))
+            {
+                ZaupShop.Instance.TellPlayer(steamPlayer, "blacklisted", itemName);
+                return;
+            }
+
+            if (ZaupShop.Instance.GroupManager.IsWhitelisted(uPlayer, itemID, false))
+            {
+                ZaupShop.Instance.TellPlayer(steamPlayer, "not_whitelisted", itemName);
+                return;
+            }
             
             decimal price = decimal.Round(ZaupShop.Instance.ShopDB.GetItemCost(itemID) * amount, 2);
             decimal playerBalance = Uconomy.Instance.Database.GetBalance(uPlayer.CSteamID.ToString());

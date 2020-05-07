@@ -114,6 +114,9 @@
     <Compile Include="Commands\CommandSell.cs" />
     <Compile Include="Commands\CommandShop.cs" />
     <Compile Include="DatabaseMgr.cs" />
+    <Compile Include="Groups\GroupManager.cs" />
+    <Compile Include="Groups\ZaupGroup.cs" />
+    <Compile Include="Groups\ZaupGroupElement.cs" />
     <Compile Include="ZaupShop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ZaupShopConfiguration.cs" />

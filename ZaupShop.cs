@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using fr34kyn01535.Uconomy;
 using Rocket.API.Collections;
 using Rocket.Core.Plugins;
@@ -6,6 +7,8 @@ using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using UnityEngine;
+using ZaupShop.Groups;
+using GroupManager = ZaupShop.Groups.GroupManager;
 using Logger = Rocket.Core.Logging.Logger;
 
 namespace ZaupShop
@@ -17,6 +20,7 @@ namespace ZaupShop
         public string ItemShopTableName;
         public string VehicleShopTableName;
         public string GroupListTableName;
+        public GroupManager GroupManager;
         
         #region Events
 
@@ -240,6 +244,14 @@ namespace ZaupShop
                 {
                     "invalid_shop_command",
                     "You entered an invalid shop command."
+                },
+                {
+                    "blacklisted",
+                    "You are forbidden from buying {0}."
+                },
+                {
+                    "not_whitelisted",
+                    "You are forbidden from buying {0}."
                 }
             };
 
@@ -250,8 +262,9 @@ namespace ZaupShop
             ItemShopTableName = Instance.Configuration.Instance.ItemShopTableName;
             VehicleShopTableName = Instance.Configuration.Instance.VehicleShopTableName;
             GroupListTableName = Instance.Configuration.Instance.GroupListTableName;
-            
+
             ShopDB = new DatabaseMgr();
+            GroupManager = new GroupManager();
         }
 
         protected override void Unload()
