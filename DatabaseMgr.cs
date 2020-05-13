@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
 using fr34kyn01535.Uconomy;
 using I18N.West;
 using MySql.Data.MySqlClient;
 using Rocket.Core.Logging;
+using ZaupShop.Groups;
 
 namespace ZaupShop
 {
@@ -14,28 +17,38 @@ namespace ZaupShop
             CheckSchema();
         }
 
-        internal void CheckSchema()
+        private void CheckSchema()
         {
+            string itemShopTableName = ZaupShop.Instance.ItemShopTableName;
+            string vehicleShopTableName = ZaupShop.Instance.VehicleShopTableName;
+            string groupsTableName = ZaupShop.Instance.GroupListTableName;
+            
             var res = ExecuteQuery(true,
-                $"show tables like '{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}'");
+                $"show tables like '{itemShopTableName}'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{itemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
-                $"show tables like '{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}'");
+                $"show tables like '{vehicleShopTableName}'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{vehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
-                $"show columns from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` like 'buyback'");
+                $"show columns from `{itemShopTableName}` like 'buyback'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"ALTER TABLE `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` ADD `buyback` decimal(15,2) NOT NULL DEFAULT '0.00'");
+                    $"ALTER TABLE `{itemShopTableName}` ADD `buyback` decimal(15,2) NOT NULL DEFAULT '0.00'");
+
+            res = ExecuteQuery(true, $"show tables like '{groupsTableName}'");
+
+            if (res == null)
+                ExecuteQuery(false,
+                    $"CREATE TABLE `{groupsTableName}` (`name` varchar(32) NOT NULL,`whitelist` tinyint NOT NULL,PRIMARY KEY (`name`))");
         }
 
         private MySqlConnection CreateConnection()
@@ -60,8 +73,8 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set itemname=@name, cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                    ? $"update `{ZaupShop.Instance.ItemShopTableName}` set itemname=@name, cost='{cost}' where id='{id}';"
+                    : $"Insert into `{ZaupShop.Instance.ItemShopTableName}` (`id`, `itemname`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
             if (affected == null) return false;
@@ -75,8 +88,8 @@ namespace ZaupShop
         {
             var affected = ExecuteQuery(false,
                 change
-                    ? $"update `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` set vehiclename=@name, cost='{cost}' where id='{id}';"
-                    : $"Insert into `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
+                    ? $"update `{ZaupShop.Instance.VehicleShopTableName}` set vehiclename=@name, cost='{cost}' where id='{id}';"
+                    : $"Insert into `{ZaupShop.Instance.VehicleShopTableName}` (`id`, `vehiclename`, `cost`) VALUES ('{id}', @name, '{cost}');",
                 new MySqlParameter("@name", name));
 
             if (affected == null) return false;
@@ -90,7 +103,7 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `cost` from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where `id` = '{id}';");
+                $"select `cost` from `{ZaupShop.Instance.ItemShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
@@ -101,7 +114,7 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `cost` from `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` where `id` = '{id}';");
+                $"select `cost` from `{ZaupShop.Instance.VehicleShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
@@ -111,7 +124,7 @@ namespace ZaupShop
         public bool DeleteItem(int id)
         {
             var affected = ExecuteQuery(false,
-                $"delete from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where id='{id}';");
+                $"delete from `{ZaupShop.Instance.ItemShopTableName}` where id='{id}';");
 
             if (affected == null) return false;
 
@@ -123,7 +136,7 @@ namespace ZaupShop
         public bool DeleteVehicle(int id)
         {
             var affected = ExecuteQuery(false,
-                $"delete from `{ZaupShop.Instance.Configuration.Instance.VehicleShopTableName}` where id='{id}';");
+                $"delete from `{ZaupShop.Instance.VehicleShopTableName}` where id='{id}';");
 
             if (affected == null) return false;
 
@@ -135,7 +148,7 @@ namespace ZaupShop
         public bool SetBuyPrice(int id, decimal cost)
         {
             var affected = ExecuteQuery(false,
-                $"update `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` set `buyback`='{cost}' where id='{id}';");
+                $"update `{ZaupShop.Instance.ItemShopTableName}` set `buyback`='{cost}' where id='{id}';");
 
             if (affected == null) return false;
 
@@ -148,11 +161,149 @@ namespace ZaupShop
         {
             var num = new decimal(0);
             var obj = ExecuteQuery(true,
-                $"select `buyback` from `{ZaupShop.Instance.Configuration.Instance.ItemShopTableName}` where `id` = '{id}';");
+                $"select `buyback` from `{ZaupShop.Instance.ItemShopTableName}` where `id` = '{id}';");
 
             if (obj != null) decimal.TryParse(obj.ToString(), out num);
 
             return num;
+        }
+
+        public bool AddGroup(ZaupGroup group)
+        {
+            byte mySQLBool = group.Whitelist ? (byte) 1 : (byte) 0;
+            string commandText =
+                $"Insert into `{ZaupShop.Instance.GroupListTableName}` (`name`, `whitelist`) VALUES (@name, '{mySQLBool}');";
+
+            var rowsObject = ExecuteQuery(false, commandText, new MySqlParameter("@name", group.Name));
+
+            if (rowsObject == null)
+                return false;
+
+            byte newRows = byte.Parse(rowsObject.ToString());
+
+            commandText =
+                $"CREATE TABLE `{group.Name}` (`id` smallint UNSIGNED NOT NULL AUTO_INCREMENT, `assetid` smallint UNSIGNED NOT NULL, `vehicle` tinyint NOT NULL, PRIMARY KEY (`id`))";
+
+            ExecuteQuery(false, commandText);
+
+            return newRows == 1;
+        }
+
+        public bool DelGroup(string groupName)
+        {
+            string commandText =
+                $"DELETE FROM `{ZaupShop.Instance.GroupListTableName}` WHERE `name` = @name;";
+
+            var rowsObject = ExecuteQuery(false, commandText, new MySqlParameter("@name", groupName));
+
+            if (rowsObject == null)
+                return false;
+
+            byte goneRows = byte.Parse(rowsObject.ToString());
+
+            commandText = $"DROP TABLE `{groupName}`;";
+            
+            ExecuteQuery(false, commandText);
+
+            return goneRows == 1;
+        }
+
+        public bool AddIDToGroup(ZaupGroup group, ZaupGroupElement element)
+        {
+            byte mySQLBool = element.Vehicle ? (byte) 1 : (byte) 0;
+            string commandText = $"INSERT INTO `{group.Name}` (`assetid`, `vehicle`) VALUES ('{element.ID}', '{mySQLBool}');";
+
+            var rowsObject = ExecuteQuery(false, commandText);
+
+            if (rowsObject == null)
+                return false;
+            
+            byte newRows = byte.Parse(rowsObject.ToString());
+
+            return newRows == 1;
+        }
+
+        public bool RemoveIDFromGroup(ZaupGroup group, ZaupGroupElement element)
+        {
+            byte mySQLBool = element.Vehicle ? (byte) 1 : (byte) 0;
+            string commandText = $"DELETE FROM `{group.Name}` WHERE `assetid` = '{element.ID}' AND `vehicle` = '{mySQLBool}';";
+
+            var rowsObject = ExecuteQuery(false, commandText);
+
+            if (rowsObject == null)
+                return false;
+            
+            byte goneRows = byte.Parse(rowsObject.ToString());
+
+            return goneRows == 1;
+        }
+
+        public HashSet<ZaupGroup> GetGroups()
+        {
+            string query = $"SELECT * FROM `{ZaupShop.Instance.GroupListTableName}`;";
+            return _GetGroups(query);
+        }
+
+        private HashSet<ZaupGroup> _GetGroups(string query)
+        {
+            HashSet<ZaupGroup> groups = new HashSet<ZaupGroup>();
+
+            using MySqlConnection connection = CreateConnection();
+            try
+            {
+                using MySqlCommand command = connection.CreateCommand();
+                command.CommandText = query;
+
+                connection.Open();
+                using MySqlDataReader reader = command.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    string groupName = reader.GetString(0);
+                    bool wlist = reader.GetBoolean(1);
+                    groups.Add(new ZaupGroup(groupName, wlist, new HashSet<ZaupGroupElement>()));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return groups;
+        }
+
+        public HashSet<ZaupGroupElement> GetGroupElements(string groupName)
+        {
+            string query = $"SELECT * FROM `{groupName}`;";
+            return _GetGroupElements(query);
+        }
+
+        private HashSet<ZaupGroupElement> _GetGroupElements(string query)
+        {
+            HashSet<ZaupGroupElement> groupElements = new HashSet<ZaupGroupElement>();
+
+            using MySqlConnection connection = CreateConnection();
+            try
+            {
+                using MySqlCommand command = connection.CreateCommand();
+                command.CommandText = query;
+
+                connection.Open();
+                using MySqlDataReader reader = command.ExecuteReader();
+                
+                while (reader.Read())
+                {
+                    ushort ID = reader.GetUInt16(1);
+                    bool vehicle = reader.GetBoolean(2);
+                    groupElements.Add(new ZaupGroupElement(ID, vehicle));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogException(ex);
+            }
+
+            return groupElements;
         }
 
         /// <summary>
@@ -170,7 +321,7 @@ namespace ZaupShop
             {
                 try
                 {
-                    var command = connection.CreateCommand();
+                    using var command = connection.CreateCommand();
                     command.CommandText = query;
 
                     foreach (var parameter in parameters)

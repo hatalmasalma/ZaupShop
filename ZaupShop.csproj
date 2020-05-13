@@ -12,6 +12,7 @@
     <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile />
+    <LangVersion>8</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -107,11 +108,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CommandBuy.cs" />
-    <Compile Include="CommandCost.cs" />
-    <Compile Include="CommandSell.cs" />
-    <Compile Include="CommandShop.cs" />
+    <Compile Include="AssetUtils.cs" />
+    <Compile Include="Commands\CommandBuy.cs" />
+    <Compile Include="Commands\CommandCost.cs" />
+    <Compile Include="Commands\CommandSell.cs" />
+    <Compile Include="Commands\CommandShop.cs" />
     <Compile Include="DatabaseMgr.cs" />
+    <Compile Include="Groups\GroupManager.cs" />
+    <Compile Include="Groups\ZaupGroup.cs" />
+    <Compile Include="Groups\ZaupGroupElement.cs" />
     <Compile Include="ZaupShop.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ZaupShopConfiguration.cs" />

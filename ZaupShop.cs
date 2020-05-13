@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using fr34kyn01535.Uconomy;
 using Rocket.API.Collections;
 using Rocket.Core.Plugins;
@@ -6,6 +7,9 @@ using Rocket.Unturned.Chat;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
 using UnityEngine;
+using ZaupShop.Groups;
+using GroupManager = ZaupShop.Groups.GroupManager;
+using Logger = Rocket.Core.Logging.Logger;
 
 namespace ZaupShop
 {
@@ -13,15 +17,22 @@ namespace ZaupShop
     {
         public DatabaseMgr ShopDB;
         public static ZaupShop Instance;
+        public string ItemShopTableName;
+        public string VehicleShopTableName;
+        public string GroupListTableName;
+        public GroupManager GroupManager;
+        
+        #region Events
 
-        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal amt, byte items, ushort item,
+        public delegate void PlayerShopBuy(UnturnedPlayer player, decimal totalCost, byte itemAmount, ushort itemID,
             string type = "item");
 
+        public delegate void PlayerShopSell(UnturnedPlayer player, decimal totalIncome, byte itemAmount, ushort itemID);
+
         public event PlayerShopBuy OnShopBuy;
-
-        public delegate void PlayerShopSell(UnturnedPlayer player, decimal amt, byte items, ushort item);
-
         public event PlayerShopSell OnShopSell;
+        
+        #endregion
 
         public override TranslationList DefaultTranslations =>
             new TranslationList
@@ -40,7 +51,23 @@ namespace ZaupShop
                 },
                 {
                     "shop_command_usage",
-                    "Usage: /shop <add/rem/chng/buy> [v.]<itemid> <cost>  <cost> is not required for rem, buy is only for items."
+                    "Usage: /shop <add/rem/chng/buy/group> [v.]<itemid> <cost> | <cost> is not required for rem, buy is only for items."
+                },
+                {
+                    "shop_group_usage",
+                    "Usage: /shop group <create/delgroup/add/rem>"
+                },
+                {
+                    "shop_group_create_usage",
+                    "Usage: /shop group create <groupName> <wlist/blist>"
+                },
+                {
+                    "shop_group_del_usage",
+                    "Usage: /shop group delgroup <groupName>"
+                },
+                {
+                    "shop_group_change_usage",
+                    "Usage: /shop group <add/rem> <groupName> [v.]<id>"
                 },
                 {
                     "error_giving_item",
@@ -159,6 +186,38 @@ namespace ZaupShop
                     "added"
                 },
                 {
+                    "shop_group_created",
+                    "You created a shop group: {0} of type: {1}."
+                },
+                {
+                    "shop_group_create_failed",
+                    "Failed to create shop group: {0}."
+                },
+                {
+                    "shop_group_deleted",
+                    "You deleted the shop group: {0}."
+                },
+                {
+                    "shop_group_delete_failed",
+                    "Failed to delete shop group: {0}."
+                },
+                {
+                    "shop_group_added_id",
+                    "You added ID: {0} to shop group: {1}."
+                },
+                {
+                    "shop_group_add_failed",
+                    "Failed to add ID: {0} to shop group: {1}."
+                },
+                {
+                    "shop_group_removed_id",
+                    "You removed ID: {0} from shop group: {1}."
+                },
+                {
+                    "shop_group_remove_failed",
+                    "Failed to remove ID: {0} from shop group: {1}."
+                },
+                {
                     "changed_or_added_to_shop",
                     "You have {0} the {1} with cost {2} to the shop."
                 },
@@ -185,13 +244,27 @@ namespace ZaupShop
                 {
                     "invalid_shop_command",
                     "You entered an invalid shop command."
+                },
+                {
+                    "blacklisted",
+                    "You are forbidden from buying {0}."
+                },
+                {
+                    "not_whitelisted",
+                    "You are forbidden from buying {0}."
                 }
             };
 
         protected override void Load()
         {
             Instance = this;
+
+            ItemShopTableName = Instance.Configuration.Instance.ItemShopTableName;
+            VehicleShopTableName = Instance.Configuration.Instance.VehicleShopTableName;
+            GroupListTableName = Instance.Configuration.Instance.GroupListTableName;
+
             ShopDB = new DatabaseMgr();
+            GroupManager = new GroupManager();
         }
 
         protected override void Unload()
@@ -200,448 +273,32 @@ namespace ZaupShop
             Instance = null;
         }
 
-        public bool Buy(UnturnedPlayer playerid, string[] components0)
+        public void TellPlayer(SteamPlayer player, string translationKey, params object[] translationParameters) =>
+            ChatManager.serverSendMessage(Instance.Translate(translationKey, translationParameters), Palette.SERVER,
+                toPlayer: player);
+
+        public void TellConsole(string translationKey, params object[] translationParameters) => Logger.Log(Instance.Translate(translationKey, translationParameters));
+
+        public void RaiseBuyVehicle(UnturnedPlayer player, decimal price, ushort vehicleID)
         {
-            string message;
-            if (components0.Length == 0)
-            {
-                message = Instance.Translate("buy_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            byte amttobuy = 1;
-            if (components0.Length > 1)
-                if (!byte.TryParse(components0[1], out amttobuy))
-                {
-                    message = Instance.Translate("invalid_amt");
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-
-            var components = Parser.getComponentsFromSerial(components0[0], '.');
-            if (components.Length == 2 && components[0].Trim() != "v" ||
-                components.Length == 1 && components[0].Trim() == "v" || components.Length > 2 ||
-                components0[0].Trim() == string.Empty)
-            {
-                message = Instance.Translate("buy_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            ushort id;
-            switch (components[0])
-            {
-                case "v":
-                    if (!Instance.Configuration.Instance.CanBuyVehicles)
-                    {
-                        message = Instance.Translate("buy_vehicles_off");
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    string name = null;
-                    if (!ushort.TryParse(components[1], out id))
-                    {
-                        var array = Assets.find(EAssetType.VEHICLE);
-
-                        var vAsset = array.Cast<VehicleAsset>()
-                            .FirstOrDefault(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
-
-                        if (vAsset == null)
-                        {
-                            message = Instance.Translate("could_not_find", components[1]);
-                            UnturnedChat.Say(playerid, message);
-                            return false;
-                        }
-
-                        id = vAsset.id;
-                        name = vAsset.vehicleName;
-                    }
-
-                    if (Assets.find(EAssetType.VEHICLE, id) == null)
-                    {
-                        message = Instance.Translate("could_not_find", components[1]);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-                    else if (name == null && id != 0)
-                    {
-                        name = ((VehicleAsset) Assets.find(EAssetType.VEHICLE, id)).vehicleName;
-                    }
-
-                    var cost = Instance.ShopDB.GetVehicleCost(id);
-                    var balance = Uconomy.Instance.Database.GetBalance(playerid.CSteamID.ToString());
-                    if (cost <= 0m)
-                    {
-                        message = Instance.Translate("vehicle_not_available", name);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    if (balance < cost)
-                    {
-                        message = Instance.Translate("not_enough_currency_msg",
-                            Uconomy.Instance.Configuration.Instance.MoneyName, "1", name);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    if (!playerid.GiveVehicle(id))
-                    {
-                        message = Instance.Translate("error_giving_item", name);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    var newbal = Uconomy.Instance.Database.IncreaseBalance(playerid.CSteamID.ToString(), cost * -1);
-                    message = Instance.Translate("vehicle_buy_msg", name, cost,
-                        Uconomy.Instance.Configuration.Instance.MoneyName, newbal,
-                        Uconomy.Instance.Configuration.Instance.MoneyName);
-                    Instance.OnShopBuy?.Invoke(playerid, cost, 1, id, "vehicle");
-                    playerid.Player.gameObject.SendMessage("ZaupShopOnBuy",
-                        new object[] {playerid, cost, amttobuy, id, "vehicle"}, SendMessageOptions.DontRequireReceiver);
-                    UnturnedChat.Say(playerid, message);
-                    return true;
-                default:
-                    if (!Instance.Configuration.Instance.CanBuyItems)
-                    {
-                        message = Instance.Translate("buy_items_off");
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    name = null;
-                    if (!ushort.TryParse(components[0], out id))
-                    {
-                        var array = Assets.find(EAssetType.ITEM);
-                        var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
-                            k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
-
-                        if (iAsset == null)
-                        {
-                            message = Instance.Translate("could_not_find", components[0]);
-                            UnturnedChat.Say(playerid, message);
-                            return false;
-                        }
-
-                        id = iAsset.id;
-                        name = iAsset.itemName;
-                    }
-
-                    if (Assets.find(EAssetType.ITEM, id) == null)
-                    {
-                        message = Instance.Translate("could_not_find", components[0]);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-                    else if (name == null && id != 0)
-                    {
-                        name = ((ItemAsset) Assets.find(EAssetType.ITEM, id)).itemName;
-                    }
-
-                    cost = decimal.Round(Instance.ShopDB.GetItemCost(id) * amttobuy, 2);
-                    balance = Uconomy.Instance.Database.GetBalance(playerid.CSteamID.ToString());
-                    if (cost <= 0m)
-                    {
-                        message = Instance.Translate("item_not_available", name);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    if (balance < cost)
-                    {
-                        message = Instance.Translate("not_enough_currency_msg",
-                            Uconomy.Instance.Configuration.Instance.MoneyName, amttobuy, name);
-                        UnturnedChat.Say(playerid, message);
-                        return false;
-                    }
-
-                    playerid.GiveItem(id, amttobuy);
-                    newbal = Uconomy.Instance.Database.IncreaseBalance(playerid.CSteamID.ToString(), cost * -1);
-                    message = Instance.Translate("item_buy_msg", name, cost,
-                        Uconomy.Instance.Configuration.Instance.MoneyName, newbal,
-                        Uconomy.Instance.Configuration.Instance.MoneyName, amttobuy);
-                    Instance.OnShopBuy?.Invoke(playerid, cost, amttobuy, id);
-                    playerid.Player.gameObject.SendMessage("ZaupShopOnBuy",
-                        new object[] {playerid, cost, amttobuy, id, "item"}, SendMessageOptions.DontRequireReceiver);
-                    UnturnedChat.Say(playerid, message);
-                    return true;
-            }
-        }
-
-        public void Cost(UnturnedPlayer playerid, string[] components)
-        {
-            string message;
-            if (components.Length == 0 || components.Length == 1 &&
-                (components[0].Trim() == string.Empty || components[0].Trim() == "v"))
-            {
-                message = Instance.Translate("cost_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return;
-            }
-
-            if (components.Length == 2 && (components[0] != "v" || components[1].Trim() == string.Empty))
-            {
-                message = Instance.Translate("cost_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return;
-            }
-
-            ushort id;
-            switch (components[0])
-            {
-                case "v":
-                    string name = null;
-                    if (!ushort.TryParse(components[1], out id))
-                    {
-                        var array = Assets.find(EAssetType.VEHICLE);
-
-                        var vAsset = array.Cast<VehicleAsset>()
-                            .FirstOrDefault(k => k?.vehicleName?.ToLower().Contains(components[1].ToLower()) == true);
-
-                        if (vAsset == null)
-                        {
-                            message = Instance.Translate("could_not_find", components[1]);
-                            UnturnedChat.Say(playerid, message);
-                            return;
-                        }
-
-                        id = vAsset.id;
-                        name = vAsset.vehicleName;
-                    }
-
-                    if (Assets.find(EAssetType.VEHICLE, id) == null)
-                    {
-                        message = Instance.Translate("could_not_find", components[1]);
-                        UnturnedChat.Say(playerid, message);
-                        return;
-                    }
-                    else if (name == null && id != 0)
-                    {
-                        name = ((VehicleAsset) Assets.find(EAssetType.VEHICLE, id)).vehicleName;
-                    }
-
-                    var cost = Instance.ShopDB.GetVehicleCost(id);
-                    message = Instance.Translate("vehicle_cost_msg", name, cost.ToString(),
-                        Uconomy.Instance.Configuration.Instance.MoneyName);
-                    if (cost <= 0m) message = Instance.Translate("error_getting_cost", name);
-                    UnturnedChat.Say(playerid, message);
-                    break;
-                default:
-                    name = null;
-                    if (!ushort.TryParse(components[0], out id))
-                    {
-                        var array = Assets.find(EAssetType.ITEM);
-                        var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
-                            k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
-
-                        if (iAsset == null)
-                        {
-                            message = Instance.Translate("could_not_find", components[0]);
-                            UnturnedChat.Say(playerid, message);
-                            return;
-                        }
-
-                        id = iAsset.id;
-                        name = iAsset.itemName;
-                    }
-
-                    if (Assets.find(EAssetType.ITEM, id) == null)
-                    {
-                        message = Instance.Translate("could_not_find", components[0]);
-                        UnturnedChat.Say(playerid, message);
-                        return;
-                    }
-                    else if (name == null && id != 0)
-                    {
-                        name = ((ItemAsset) Assets.find(EAssetType.ITEM, id)).itemName;
-                    }
-
-                    cost = Instance.ShopDB.GetItemCost(id);
-                    var bbp = Instance.ShopDB.GetItemBuyPrice(id);
-                    message = Instance.Translate("item_cost_msg", name, cost.ToString(),
-                        Uconomy.Instance.Configuration.Instance.MoneyName, bbp.ToString(),
-                        Uconomy.Instance.Configuration.Instance.MoneyName);
-                    if (cost <= 0m) message = Instance.Translate("error_getting_cost", name);
-                    UnturnedChat.Say(playerid, message);
-                    break;
-            }
-        }
-
-        public bool Sell(UnturnedPlayer playerid, string[] components)
-        {
-            string message;
-            if (components.Length == 0 || components.Length > 0 && components[0].Trim() == string.Empty)
-            {
-                message = Instance.Translate("sell_command_usage");
-                // We are going to print how to use
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            byte amttosell = 1;
-            if (components.Length > 1)
-                if (!byte.TryParse(components[1], out amttosell))
-                {
-                    message = Instance.Translate("invalid_amt");
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-
-            var amt = amttosell;
-            if (!Instance.Configuration.Instance.CanSellItems)
-            {
-                message = Instance.Translate("sell_items_off");
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            string name = null;
-            if (!ushort.TryParse(components[0], out var id))
-            {
-                var array = Assets.find(EAssetType.ITEM);
-                var iAsset = array.Cast<ItemAsset>().FirstOrDefault(k =>
-                    k?.itemName?.ToLower().Contains(components[0].ToLower()) == true);
-
-                if (iAsset == null)
-                {
-                    message = Instance.Translate("could_not_find", components[0]);
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-
-                id = iAsset.id;
-                name = iAsset.itemName;
-            }
-
-            if (id == 0)
-            {
-                message = Instance.Translate("could_not_find", components[0]);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            var vAsset = (ItemAsset) Assets.find(EAssetType.ITEM, id);
-
-            if (vAsset == null)
-            {
-                message = Instance.Translate("could_not_find", components[0]);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            if (name == null) name = vAsset.itemName;
-
-            // Get how many they have
-            if (playerid.Inventory.has(id) == null)
-            {
-                message = Instance.Translate("not_have_item_sell", name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            var list = playerid.Inventory.search(id, true, true);
-            if (list.Count == 0 || vAsset.amount == 1 && list.Count < amttosell)
-            {
-                message = Instance.Translate("not_enough_items_sell", amttosell.ToString(), name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            if (vAsset.amount > 1)
-            {
-                var ammomagamt = 0;
-                foreach (var ins in list) ammomagamt += ins.jar.item.amount;
-                if (ammomagamt < amttosell)
-                {
-                    message = Instance.Translate("not_enough_ammo_sell", name);
-                    UnturnedChat.Say(playerid, message);
-                    return false;
-                }
-            }
-
-            // We got this far, so let's buy back the items and give them money.
-            // Get cost per item.  This will be whatever is set for most items, but changes for ammo and magazines.
-            var price = Instance.ShopDB.GetItemBuyPrice(id);
-            if (price <= 0.00m)
-            {
-                message = Instance.Translate("no_sell_price_set", name);
-                UnturnedChat.Say(playerid, message);
-                return false;
-            }
-
-            byte quality = 100;
-            decimal peritemprice = 0;
-            decimal addmoney = 0;
-            switch (vAsset.amount)
-            {
-                case 1:
-                    // These are single items, not ammo or magazines
-                    while (amttosell > 0)
-                    {
-                        if (playerid.Player.equipment.checkSelection(list[0].page, list[0].jar.x, list[0].jar.y))
-                            playerid.Player.equipment.dequip();
-                        if (Instance.Configuration.Instance.QualityCounts)
-                            quality = list[0].jar.item.durability;
-                        peritemprice = decimal.Round(price * (quality / 100.0m), 2);
-                        addmoney += peritemprice;
-                        playerid.Inventory.removeItem(list[0].page,
-                            playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                        list.RemoveAt(0);
-                        amttosell--;
-                    }
-
-                    break;
-                default:
-                    // This is ammo or magazines
-                    var amttosell1 = amttosell;
-                    while (amttosell > 0)
-                    {
-                        if (playerid.Player.equipment.checkSelection(list[0].page, list[0].jar.x, list[0].jar.y))
-                            playerid.Player.equipment.dequip();
-                        if (list[0].jar.item.amount >= amttosell)
-                        {
-                            var left = (byte) (list[0].jar.item.amount - amttosell);
-                            list[0].jar.item.amount = left;
-                            playerid.Inventory.sendUpdateAmount(list[0].page, list[0].jar.x, list[0].jar.y, left);
-                            amttosell = 0;
-                            if (left == 0)
-                            {
-                                playerid.Inventory.removeItem(list[0].page,
-                                    playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                                list.RemoveAt(0);
-                            }
-                        }
-                        else
-                        {
-                            amttosell -= list[0].jar.item.amount;
-                            playerid.Inventory.sendUpdateAmount(list[0].page, list[0].jar.x, list[0].jar.y, 0);
-                            playerid.Inventory.removeItem(list[0].page,
-                                playerid.Inventory.getIndex(list[0].page, list[0].jar.x, list[0].jar.y));
-                            list.RemoveAt(0);
-                        }
-                    }
-
-                    peritemprice = decimal.Round(price * (amttosell1 / (decimal) vAsset.amount), 2);
-                    addmoney += peritemprice;
-                    break;
-            }
-
-            var balance = Uconomy.Instance.Database.IncreaseBalance(playerid.CSteamID.ToString(), addmoney);
-            message = Instance.Translate("sold_items", amt, name, addmoney,
-                Uconomy.Instance.Configuration.Instance.MoneyName, balance,
-                Uconomy.Instance.Configuration.Instance.MoneyName);
-            Instance.OnShopSell?.Invoke(playerid, addmoney, amt, id);
-            playerid.Player.gameObject.SendMessage("ZaupShopOnSell", new object[] {playerid, addmoney, amt, id},
+            Instance.OnShopBuy?.Invoke(player, price, 1, vehicleID, "vehicle");
+            
+            player.Player.gameObject.SendMessage("ZaupShopOnBuy", new object[] {player, price, 1, vehicleID, "vehicle"},
                 SendMessageOptions.DontRequireReceiver);
-            UnturnedChat.Say(playerid, message);
+        }
 
-            return true;
+        public void RaiseBuyItem(UnturnedPlayer player, decimal price, byte amount, ushort itemID)
+        {
+            Instance.OnShopBuy?.Invoke(player, price, amount, itemID);
+
+            player.Player.gameObject.SendMessage("ZaupShopOnBuy",
+                new object[] {player, price, amount, itemID, "item"}, SendMessageOptions.DontRequireReceiver);
+        }
+
+        public void RaiseSellItem(UnturnedPlayer uPlayer, decimal income, byte items, ushort itemID)
+        {
+            Instance.OnShopSell?.Invoke(uPlayer, income, items, itemID);
+            uPlayer.Player.gameObject.SendMessage("ZaupShopOnSell", new object[] {uPlayer, income, items, itemID});
         }
     }
 }
