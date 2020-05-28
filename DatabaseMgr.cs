@@ -248,14 +248,14 @@ namespace ZaupShop
         {
             HashSet<ZaupGroup> groups = new HashSet<ZaupGroup>();
 
-            using MySqlConnection connection = CreateConnection();
+            MySqlConnection connection = CreateConnection();
             try
             {
-                using MySqlCommand command = connection.CreateCommand();
+                MySqlCommand command = connection.CreateCommand();
                 command.CommandText = query;
 
                 connection.Open();
-                using MySqlDataReader reader = command.ExecuteReader();
+                MySqlDataReader reader = command.ExecuteReader();
                 
                 while (reader.Read())
                 {
@@ -282,14 +282,14 @@ namespace ZaupShop
         {
             HashSet<ZaupGroupElement> groupElements = new HashSet<ZaupGroupElement>();
 
-            using MySqlConnection connection = CreateConnection();
+            MySqlConnection connection = CreateConnection();
             try
             {
-                using MySqlCommand command = connection.CreateCommand();
+                MySqlCommand command = connection.CreateCommand();
                 command.CommandText = query;
 
                 connection.Open();
-                using MySqlDataReader reader = command.ExecuteReader();
+                MySqlDataReader reader = command.ExecuteReader();
                 
                 while (reader.Read())
                 {
@@ -321,7 +321,7 @@ namespace ZaupShop
             {
                 try
                 {
-                    using var command = connection.CreateCommand();
+                    var command = connection.CreateCommand();
                     command.CommandText = query;
 
                     foreach (var parameter in parameters)
