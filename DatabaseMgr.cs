@@ -28,14 +28,14 @@ namespace ZaupShop
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{itemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{itemShopTableName}` (`id` int(6) NOT NULL,`itemname` varchar(62) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '20.00',`buyback` decimal(15,2) NOT NULL DEFAULT '0.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
                 $"show tables like '{vehicleShopTableName}'");
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{vehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(32) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
+                    $"CREATE TABLE `{vehicleShopTableName}` (`id` int(6) NOT NULL,`vehiclename` varchar(62) NOT NULL,`cost` decimal(15,2) NOT NULL DEFAULT '100.00',PRIMARY KEY (`id`))");
 
             res = ExecuteQuery(true,
                 $"show columns from `{itemShopTableName}` like 'buyback'");
@@ -48,7 +48,7 @@ namespace ZaupShop
 
             if (res == null)
                 ExecuteQuery(false,
-                    $"CREATE TABLE `{groupsTableName}` (`name` varchar(32) NOT NULL,`whitelist` tinyint NOT NULL,PRIMARY KEY (`name`))");
+                    $"CREATE TABLE `{groupsTableName}` (`name` varchar(62) NOT NULL,`whitelist` tinyint NOT NULL,PRIMARY KEY (`name`))");
         }
 
         private MySqlConnection CreateConnection()
